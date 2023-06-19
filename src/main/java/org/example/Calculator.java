@@ -9,30 +9,99 @@ public class Calculator {
     public static String calculate(String stringToCalculate, double exchangeRate) {
         stringToCalculate = preprocessInput(stringToCalculate);
         LinkedList<String> operations = new LinkedList<>();
-        LinkedList<Double> numbers = new LinkedList<>();
+        LinkedList<String> numbers = new LinkedList<>();
         parse(stringToCalculate, numbers, operations);
         while (operations.size() != 0) {
             operate(numbers, operations.removeLast());
         }
-        return String.valueOf(numbers.removeLast());
+        String result = numbers.removeLast();
+        String currency = Converter.getCurrency(result);
+        result = result.replace(currency, "");
+        result = String.format("%.2f", Double.parseDouble(result));
+        if(currency.equals("$"))
+            result = currency + result;
+        else
+            result = result + "p";
+        return result;
     }
 
-    private static void operate(LinkedList<Double> numbers, String operator) {
-        double r = numbers.removeLast();
+    private static void operate(LinkedList<String> numbers, String operator) {
+        String r = numbers.removeLast();
         switch (operator) {
-            case "+" -> numbers.add(r + numbers.removeLast());
-            case "-" -> numbers.add(numbers.removeLast() - r);
-            case "toDollars" -> numbers.add(r / 60);
-            case "toRubles" -> numbers.add(r * 60);
+            case "+" -> {
+                String a = numbers.removeLast();
+                if (Converter.areNumbersInSameCurrency(r, a)) {
+                    if (Converter.getCurrency(r).equals("$")) {
+                        r = r.replace("$", "");
+                        a = a.replace("$", "");
+                        r = "$" + (Double.parseDouble(r) + Double.parseDouble(a));
+                        numbers.add(r);
+                    } else {
+                        r = r.replace("p", "");
+                        a = a.replace("p", "");
+                        r = Double.parseDouble(r) + Double.parseDouble(a) + "p";
+                        numbers.add(r);
+                    }
+                } else {
+                    double numberA = Converter.convert(a);
+                    String currency = Converter.getCurrency(r);
+                    r = r.replace(Converter.getCurrency(r), "");
+                    r = String.valueOf((Double.parseDouble(r) + numberA));
+                    if (currency.equals("$"))
+                        r = "$" + r;
+                    else r = r + "p";
+                    numbers.add(r);
+                }
+            }
+            case "-" -> {
+                String a = numbers.removeLast();
+                if (Converter.areNumbersInSameCurrency(r, a)) {
+                    if (Converter.getCurrency(r).equals("$")) {
+                        r = r.replace("$", "");
+                        a = a.replace("$", "");
+                        r = "$" + (Double.parseDouble(a) - Double.parseDouble(r));
+                        numbers.add(r);
+                    } else {
+                        r = r.replace("p", "");
+                        a = a.replace("p", "");
+                        r = Double.parseDouble(a) - Double.parseDouble(r) + "p";
+                        numbers.add(r);
+                    }
+                } else {
+                    double numberA = Converter.convert(a);
+                    String currency = Converter.getCurrency(r);
+                    r = r.replace(Converter.getCurrency(r), "");
+                    r = String.valueOf(numberA - (Double.parseDouble(r)));
+                    if (currency.equals("$"))
+                        r = "$" + r;
+                    else r = r + "p";
+                    numbers.add(r);
+                }
+            }
+            case "toDollars" -> {
+                if (Converter.isNeedToConvert(operator, r)) {
+                    r = r.replace("p", "");
+                    r = "$" + Double.parseDouble(r) / 60;
+                    numbers.add(r);
+                } else numbers.add(r);
+            }
+            case "toRubles" -> {
+                if (Converter.isNeedToConvert(operator, r)) {
+                    r = r.replace("$", "");
+                    r = Double.parseDouble(r) * 60 + "p";
+                    numbers.add(r);
+                } else numbers.add(r);
+
+            }
         }
     }
 
-    private static void parse(String stringToCalculate, LinkedList<Double> numbers, LinkedList<String> operations) {
+    private static void parse(String stringToCalculate, LinkedList<String> numbers, LinkedList<String> operations) {
         StringBuilder tempFunction = new StringBuilder();
         StringBuilder tempNumber = new StringBuilder();
         for (int i = 0; i < stringToCalculate.length(); i++) {
             if (stringToCalculate.charAt(i) == 't') {
-                while (i < stringToCalculate.length() & !Pattern.matches("[0-9(]", String.valueOf(stringToCalculate.charAt(i)))) {
+                while (i < stringToCalculate.length() & !Pattern.matches("[0-9($]+", String.valueOf(stringToCalculate.charAt(i)))) {
                     tempFunction.append(stringToCalculate.charAt(i));
                     i++;
                 }
@@ -40,21 +109,21 @@ public class Calculator {
                 operations.add(tempFunction.toString());
                 tempFunction = new StringBuilder();
             }
-            if (Pattern.matches("[0-9]", String.valueOf(stringToCalculate.charAt(i)))) {
-                while (i < stringToCalculate.length() && Pattern.matches("[0-9.]", String.valueOf(stringToCalculate.charAt(i)))) {
+            if (Pattern.matches("[0-9$p]", String.valueOf(stringToCalculate.charAt(i)))) {
+                while (i < stringToCalculate.length() && Pattern.matches("[0-9.$p]", String.valueOf(stringToCalculate.charAt(i)))) {
                     tempNumber.append(stringToCalculate.charAt(i));
                     i++;
                 }
                 i--;
-                numbers.add(Double.parseDouble(tempNumber.toString()));
+                numbers.add(tempNumber.toString());
                 tempNumber = new StringBuilder();
             }
             if (stringToCalculate.charAt(i) == '+' || stringToCalculate.charAt(i) == '-' || stringToCalculate.charAt(i) == '(') {
                 operations.add(String.valueOf(stringToCalculate.charAt(i)));
             }
-            if(stringToCalculate.charAt(i) == ')'){
+            if (stringToCalculate.charAt(i) == ')') {
                 while (!operations.getLast().equals("("))
-                    operate(numbers,operations.removeLast());
+                    operate(numbers, operations.removeLast());
                 operations.removeLast();
             }
         }
