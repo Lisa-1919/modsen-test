@@ -23,8 +23,10 @@ public class Converter {
         return Pattern.matches("\\$[0-9.]+", number) ? "$" : "p";
     }
 
-    public static double convert(String number, String currencyToConvert) {
+    public static double convert(String number, String currencyToConvert, double exchangeRate) {
         double r = Double.parseDouble(number.replace(getCurrency(number), ""));
-        return currencyToConvert.equals("$") ? r / 60 : r * 60;
+        return currencyToConvert.equals("$") ? r / exchangeRate : r * exchangeRate;
     }
+
+
 }
