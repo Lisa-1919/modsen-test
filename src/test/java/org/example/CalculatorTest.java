@@ -29,5 +29,6 @@ public class CalculatorTest {
     @Test
     public void test() throws Exception {
         assertEquals("$2,00", Calculator.calculate("toDollars 60,00p + $1"));
+
     }
 }
